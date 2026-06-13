@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "aiclix"
+name = "aicli-x"
 description = "Lightweight AI partner living inside your terminal. Type naturally. It understands. It fixes. It executes."
 keywords = ["ai", "terminal", "cli", "assistant", "llm", "claude", "openai", "gemini"]
 readme = "README.md"
