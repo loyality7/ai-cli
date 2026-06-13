@@ -153,6 +153,6 @@ Desktop.ini
 .DS_Store
 
 # Workspace references and design files
-refer/
-ui/
-plan.txt
+/refer/
+/ui/
+/plan.txt
