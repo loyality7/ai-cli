@@ -145,8 +145,8 @@ SPINNER_STYLES = [
 
 def get_random_loader(message: Optional[str] = None):
     """Return a Rich status context manager with a randomly selected ASCII spinner, color, and message."""
-    phrase = message if message else random.choice(LOADING_PHRASES)
-    spinner_name, spinner_color, text_style = random.choice(SPINNER_STYLES)
+    phrase = message if message else random.choice(LOADING_PHRASES)  # nosec B311
+    spinner_name, spinner_color, text_style = random.choice(SPINNER_STYLES)  # nosec B311
     return console.status(
         f"  [{text_style}]{phrase}[/]...",
         spinner=spinner_name,
@@ -308,7 +308,7 @@ def print_header() -> None:
     logo1 = (
         "  [bold cyan]████████████[/][bold magenta]█████████████████[/]\n"
         "  [bold cyan]██▀▄─██▄─▄██[/][bold magenta]█─▄▄▄─█▄─▄███▄─▄█[/]\n"
-        "  [bold cyan]██─▀─███─███[/][bold magenta]██─███▀██─██▀██─██[/]\n"
+        "  [bold cyan]██─▀─███─███[/][bold magenta]█─███▀██─██▀██─██[/]\n"
         "  [bold cyan]▀▄▄▀▄▄▀▄▄▄▀▀[/][bold magenta]▀▄▄▄▄▄▀▄▄▄▄▄▀▄▄▄▀[/]"
     )
 
@@ -327,7 +327,7 @@ def print_header() -> None:
         "  [bold cyan]█▀█ █ [/]  [bold magenta]█▄▄ █▄▄ █[/]"
     )
 
-    selected_logo = random.choice([logo1, logo2, logo3, logo4])
+    selected_logo = random.choice([logo1, logo2, logo3, logo4])  # nosec B311
 
     console.print()
     console.print(selected_logo)
