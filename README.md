@@ -12,7 +12,7 @@ Type naturally. It understands. It fixes. It executes.
 ## Install
 
 ```
-pip install -e .
+pip install aicli-x
 ```
 
 ## Usage
