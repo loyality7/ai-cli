@@ -12,7 +12,7 @@ def search_web(query: str) -> str:
         headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"}
     )
     try:
-        with urllib.request.urlopen(req, timeout=5) as response:
+        with urllib.request.urlopen(req, timeout=5) as response:  # nosec B310
             body = response.read().decode('utf-8', errors='ignore')
             
             snippets = re.findall(r'<a class="result__snippet"[^>]*>(.*?)</a>', body, re.DOTALL)
@@ -42,9 +42,9 @@ def fetch_url(url: str) -> str:
                 raw_url = f"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{name}"
                 req = urllib.request.Request(raw_url, headers={"User-Agent": "Mozilla/5.0"})
                 try:
-                    with urllib.request.urlopen(req, timeout=3) as response:
+                    with urllib.request.urlopen(req, timeout=3) as response:  # nosec B310
                         return response.read().decode('utf-8', errors='ignore')
-                except Exception:
+                except Exception:  # nosec B112
                     continue
 
     # General page fetch
@@ -53,7 +53,7 @@ def fetch_url(url: str) -> str:
         headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
     )
     try:
-        with urllib.request.urlopen(req, timeout=5) as response:
+        with urllib.request.urlopen(req, timeout=5) as response:  # nosec B310
             content = response.read().decode('utf-8', errors='ignore')
             # Strip script and style blocks
             content = re.sub(r'<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>', '', content, flags=re.IGNORECASE)

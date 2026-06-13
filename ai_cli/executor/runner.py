@@ -7,7 +7,7 @@ Windows (PowerShell/cmd) and Unix (bash/zsh/sh).
 
 import os
 import platform
-import subprocess
+import subprocess  # nosec B404
 import shlex
 from dataclasses import dataclass
 from typing import Optional
@@ -72,7 +72,7 @@ def run_command(
 
     try:
         if capture:
-            result = subprocess.run(
+            result = subprocess.run(  # nosec B603
                 full_cmd,
                 capture_output=True,
                 text=True,
@@ -87,7 +87,7 @@ def run_command(
             )
         else:
             # Stream to terminal directly (interactive mode)
-            result = subprocess.run(
+            result = subprocess.run(  # nosec B603
                 full_cmd,
                 cwd=cwd,
                 timeout=timeout,

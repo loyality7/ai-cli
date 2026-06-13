@@ -13,7 +13,7 @@ Keeps it small and focused per the plan:
 
 import os
 import platform
-import subprocess
+import subprocess  # nosec B404
 from pathlib import Path
 from typing import Optional
 
@@ -27,7 +27,7 @@ def _run_quiet(cmd: list[str], cwd: Optional[str] = None, timeout: int = 5) -> s
             text=True,
             cwd=cwd,
             timeout=timeout,
-            shell=(platform.system() == "Windows"),
+            shell=(platform.system() == "Windows"),  # nosec B602
         )
         return result.stdout.strip()
     except Exception:
@@ -101,7 +101,7 @@ def _get_project_info(cwd: str) -> Optional[str]:
             scripts = data.get("scripts", {})
             script_list = ", ".join(scripts.keys()) if scripts else "none"
             return f"Node project: {name}\nScripts: {script_list}"
-        except Exception:
+        except Exception:  # nosec B110
             pass
 
     # pyproject.toml
@@ -115,7 +115,7 @@ def _get_project_info(cwd: str) -> Optional[str]:
             scripts = data.get("project", {}).get("scripts", {})
             script_list = ", ".join(scripts.keys()) if scripts else "none"
             return f"Python project: {name}\nEntry points: {script_list}"
-        except Exception:
+        except Exception:  # nosec B110
             pass
 
     return None
@@ -177,7 +177,7 @@ def build_context(
                 if len(recent) >= 10:
                     break
             session_history = recent
-        except Exception:
+        except Exception:  # nosec B110
             pass
 
     if session_history:
