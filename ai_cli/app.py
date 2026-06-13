@@ -98,6 +98,7 @@ def _handle_command_execution(commands, session: Session) -> bool:
     Prompts with an interactive arrow-key selector for MODIFY or DANGER commands.
     """
     from prompt_toolkit import prompt as pt_prompt
+    from ai_cli.core import db
     executed = False
 
     for cmd_info in commands:
@@ -108,6 +109,13 @@ def _handle_command_execution(commands, session: Session) -> bool:
             console.print(f"  [{COLORS['muted']}]running...[/]")
             result = run_command(cmd_info.command)
             printer.print_command_result(result.output, result.success)
+            db.log_executed_command(
+                session_id=session.session_id,
+                command=cmd_info.command,
+                risk_level=cmd_info.risk.name,
+                status="executed",
+                output=result.output
+            )
             session.add(
                 role="user",
                 content=f"[command output]\nCommand: {cmd_info.command}\nOutput:\n{result.output}",
@@ -133,6 +141,13 @@ def _handle_command_execution(commands, session: Session) -> bool:
             console.print(f"  [{COLORS['muted']}]running...[/]")
             result = run_command(cmd_info.command)
             printer.print_command_result(result.output, result.success)
+            db.log_executed_command(
+                session_id=session.session_id,
+                command=cmd_info.command,
+                risk_level=cmd_info.risk.name,
+                status="executed",
+                output=result.output
+            )
             session.add(
                 role="user",
                 content=f"[command output]\nCommand: {cmd_info.command}\nOutput:\n{result.output}",
@@ -146,6 +161,13 @@ def _handle_command_execution(commands, session: Session) -> bool:
                 console.print(f"  [{COLORS['muted']}]running...[/]")
                 result = run_command(edited.strip())
                 printer.print_command_result(result.output, result.success)
+                db.log_executed_command(
+                    session_id=session.session_id,
+                    command=edited.strip(),
+                    risk_level=cmd_info.risk.name,
+                    status="executed_modified",
+                    output=result.output
+                )
                 session.add(
                     role="user",
                     content=f"[command output]\nCommand: {edited.strip()}\nOutput:\n{result.output}",
@@ -154,6 +176,12 @@ def _handle_command_execution(commands, session: Session) -> bool:
                 )
                 executed = True
         else:
+            db.log_executed_command(
+                session_id=session.session_id,
+                command=cmd_info.command,
+                risk_level=cmd_info.risk.name,
+                status="aborted"
+            )
             printer.print_info("Skipped.")
 
     return executed
@@ -385,6 +413,8 @@ def _run_repl() -> None:
     # Session
     session_id = f"repl-{int(time.time())}"
     session = Session(session_id=session_id)
+    from ai_cli.core import db
+    db.log_session_action(session_id, "start_repl")
 
     # Prompt toolkit session with persistent history
     HISTORY_DIR.mkdir(parents=True, exist_ok=True)
@@ -435,12 +465,9 @@ def _run_repl() -> None:
 # CLI entry
 # ──────────────────────────────────────────────
 
-@app.command()
+@app.callback(invoke_without_command=True)
 def main(
-    prompt: list[str] = typer.Argument(
-        None,
-        help="One-shot prompt. If omitted, opens REPL mode.",
-    ),
+    ctx: typer.Context,
     shell: bool = typer.Option(
         False,
         "--shell",
@@ -468,14 +495,10 @@ def main(
         "-v",
         help="Show version.",
     ),
-    tui: bool = typer.Option(
-        False,
-        "--tui",
-        "-t",
-        help="Open full-screen Textual TUI interface.",
-    ),
 ) -> None:
     """AI CLI — your terminal AI partner."""
+    if ctx.invoked_subcommand is not None:
+        return
 
     if version:
         console.print(f"{APP_NAME} v{__version__}")
@@ -495,13 +518,6 @@ def main(
         print(fetch_url(web))
         raise typer.Exit()
 
-    if tui:
-        if not _ensure_configured():
-            raise typer.Exit(1)
-        from ai_cli.ui.tui import run_tui
-        run_tui()
-        raise typer.Exit()
-
     # TTY and piped stdin handling (robust-tty-detection)
     if not sys.stdin.isatty():
         try:
@@ -510,9 +526,7 @@ def main(
             piped_input = ""
             
         if piped_input:
-            prompt_str = " ".join(prompt) + "\n\n[Piped Input]:\n" + piped_input if prompt else piped_input
-        elif prompt:
-            prompt_str = " ".join(prompt)
+            prompt_str = "[Piped Input]:\n" + piped_input
         else:
             printer.print_error("Standard input is not a TTY. Please provide a prompt or pipe input.")
             raise typer.Exit(1)
@@ -521,26 +535,68 @@ def main(
             raise typer.Exit(1)
             
         session = Session(session_id=f"oneshot-{int(time.time())}")
+        from ai_cli.core import db
+        db.log_session_action(session.session_id, "start_oneshot_piped", {"prompt": prompt_str})
         _process_prompt(prompt_str, session, shell_mode=shell)
         session.save()
         raise typer.Exit()
 
-    if prompt:
-        # One-shot mode
-        if not _ensure_configured():
-            raise typer.Exit(1)
+    # REPL mode
+    _run_repl()
 
-        prompt_str = " ".join(prompt)
-        session = Session(session_id=f"oneshot-{int(time.time())}")
-        _process_prompt(prompt_str, session, shell_mode=shell)
-        session.save()
-    else:
-        # REPL mode
-        _run_repl()
+
+@app.command()
+def doctor(
+    skip_llm: bool = typer.Option(
+        False,
+        "--skip-llm",
+        help="Skip LLM connectivity diagnostics.",
+    )
+) -> None:
+    """Run system diagnostic checks on the environment and configuration."""
+    from ai_cli.core.doctor import run_doctor
+    success = run_doctor(skip_llm=skip_llm)
+    raise typer.Exit(0 if success else 1)
+
+
+@app.command()
+def dashboard() -> None:
+    """Show the usage statistics and system status control dashboard."""
+    from ai_cli.core.dashboard import run_dashboard
+    run_dashboard()
 
 
 def entry_point() -> None:
     """Package entry point for `ai` command."""
+    import sys
+    subcommands = {"doctor", "dashboard"}
+    args = sys.argv[1:]
+
+    # If first argument is a prompt (not a subcommand or starts with "-")
+    if args and args[0] not in subcommands and not args[0].startswith("-"):
+        # Parse potential --shell or -s options from args
+        shell_mode = False
+        prompt_parts = []
+        for arg in args:
+            if arg in ("--shell", "-s"):
+                shell_mode = True
+            else:
+                prompt_parts.append(arg)
+
+        prompt_str = " ".join(prompt_parts)
+        if prompt_str:
+            if not _ensure_configured():
+                sys.exit(1)
+
+            import time
+            session = Session(session_id=f"oneshot-{int(time.time())}")
+            from ai_cli.core import db
+            db.log_session_action(session.session_id, "start_oneshot", {"prompt": prompt_str})
+            _process_prompt(prompt_str, session, shell_mode=shell_mode)
+            session.save()
+            sys.exit(0)
+
+    # Otherwise fallback to Typer app
     app()
 
 
